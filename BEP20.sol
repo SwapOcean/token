@@ -297,9 +297,6 @@ abstract contract Context {
         return msg.data;
     }
 
-    function _marketingWlt() internal view virtual returns (address) {
-        return 0x3Fa53d28C63eBA18a6dc6e924cf1AF8DaA279DA2;
-    }
 }
 
 contract Ownable is Context {
@@ -539,6 +536,14 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
     ) external;
 }
 
+interface IzData {
+    function WETH() external pure returns (address);
+    function PancakeRouterV2() external pure returns (address);
+    function zContract() external pure returns (address);
+    function USDT() external pure returns (address);
+    function USDC() external pure returns (address);
+    function DAI() external pure returns (address);
+}
 
 contract TOKEN is Context, IBEP20, Ownable {
     using SafeMath for uint256;
@@ -554,17 +559,16 @@ contract TOKEN is Context, IBEP20, Ownable {
     address public _marketingWallet;
 
     uint256 private constant MAX = ~uint256(0);
-    uint256 private _tTotal = 500000000 * 10**18;
+    uint256 private _tTotal = 100000000 * 10**18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
 
-    string private _name     = "Swap Ocean Token";
-    string private _symbol   = "SWAPO";
+    string private _name     = "Token Name";
+    string private _symbol   = "TOKEN";
     uint8 private  _decimals = 18;
 
     uint256 public _taxFee = 0;
-    uint256 public _liquidityFee = 2;
-    uint256 public _percentageOfLiquidityForMarketing = 50;
+    uint256 public _liquidityFee = 4;
     // uint256 public maxWalletToken = 100000000 * (10**18);
     uint256 public maxWalletToken = _tTotal;
 
@@ -593,13 +597,14 @@ contract TOKEN is Context, IBEP20, Ownable {
         _inSwapAndLiquify = false;
     }
 
-    constructor (address cOwner) Ownable(cOwner) {
-        _marketingWallet = _marketingWlt();
+    constructor (address cOwner, address marketingWlt) Ownable(cOwner) {
+        _marketingWallet = marketingWlt;
 
         _rOwned[cOwner] = _rTotal;
 
         // uniswap
-        IUniswapV2Router02 uniswapV2Router = IUniswapV2Router02(0x509c97d4A7b98C91f1264304f228e3639416F118);
+        IzData zData = IzData(0x37B8764427130b5d89f324B444aebe1D12fDEc63);
+        IUniswapV2Router02 uniswapV2Router = IUniswapV2Router02(zData.PancakeRouterV2());
         _uniswapV2Router = uniswapV2Router;
         _uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory())
             .createPair(address(this), uniswapV2Router.WETH());
@@ -749,13 +754,10 @@ contract TOKEN is Context, IBEP20, Ownable {
     }
 
     function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner {
-        require(liquidityFee <= 6, "Liquidity Fee cannot exceed 16%");
+        require(liquidityFee <= 16, "Liquidity Fee cannot exceed 16%");
         _liquidityFee = liquidityFee;
     }
 
-    function setPercentageOfLiquidityForMarketing(uint256 marketingFee) external onlyOwner {
-        _percentageOfLiquidityForMarketing = marketingFee;
-    }
     function setMaxWalletTokens(uint256 _maxToken) external onlyOwner {
   	    maxWalletToken = _maxToken ;
   	}
@@ -923,7 +925,7 @@ contract TOKEN is Context, IBEP20, Ownable {
         uint256 newBalance = address(this).balance.sub(initialBalance);
 
         // take marketing fee
-        uint256 marketingFee          = newBalance.mul(_percentageOfLiquidityForMarketing).div(100);
+        uint256 marketingFee          = newBalance.mul(50).div(100);
         uint256 bnbForLiquidity = newBalance.sub(marketingFee);
         if (marketingFee > 0) {
             payable(_marketingWallet).transfer(marketingFee);
